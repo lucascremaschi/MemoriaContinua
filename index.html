@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asignación Contigua de Memoria</title>
+<style>
+:root{
+  --bg:#0b1020; --panel:#121a2d; --panel2:#18233b; --text:#eef3ff;
+  --muted:#aab6d0; --accent:#7c5cff; --accent2:#28d7c5;
+  --border:rgba(255,255,255,.09);
+}
+*{box-sizing:border-box;scroll-behavior:smooth}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:
+radial-gradient(circle at 15% 10%,rgba(124,92,255,.18),transparent 30%),
+radial-gradient(circle at 85% 25%,rgba(40,215,197,.10),transparent 28%),var(--bg);
+color:var(--text);line-height:1.65}
+a{color:inherit}
+.container{width:min(1120px,92%);margin:auto}
+header{position:sticky;top:0;z-index:10;background:rgba(11,16,32,.82);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+nav{display:flex;align-items:center;justify-content:space-between;min-height:68px}
+.logo{font-weight:800;letter-spacing:.3px}.logo span{color:var(--accent2)}
+nav a{text-decoration:none;color:var(--muted);margin-left:22px;font-size:.94rem}
+nav a:hover{color:white}
+.hero{min-height:78vh;display:grid;place-items:center;padding:80px 0}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:55px;align-items:center}
+.badge{display:inline-flex;padding:7px 13px;border:1px solid var(--border);border-radius:999px;color:#c9c0ff;background:rgba(124,92,255,.1);font-size:.85rem}
+h1{font-size:clamp(2.7rem,6vw,5.5rem);line-height:.98;margin:20px 0}
+h1 span{background:linear-gradient(90deg,#fff,var(--accent2));-webkit-background-clip:text;color:transparent}
+.lead{font-size:1.15rem;color:var(--muted);max-width:680px}
+.cta{display:inline-block;margin-top:20px;padding:12px 18px;border-radius:12px;background:var(--accent);text-decoration:none;font-weight:700}
+.memory-card{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--border);border-radius:24px;padding:24px;box-shadow:0 25px 70px rgba(0,0,0,.28)}
+.memory-card h3{margin-top:0}.ram{display:grid;gap:9px;margin-top:20px}
+.block{height:48px;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-weight:700;background:#202d49;border:1px solid rgba(255,255,255,.06)}
+.block.process{background:linear-gradient(90deg,#7c5cff,#5c7cff)}
+.block.free{background:#25324a;color:#9eabc2}
+section{padding:95px 0}
+.section-title{max-width:760px;margin-bottom:34px}
+.kicker{color:var(--accent2);font-weight:800;text-transform:uppercase;font-size:.78rem;letter-spacing:2px}
+h2{font-size:clamp(2rem,4vw,3.4rem);margin:8px 0 12px;line-height:1.1}
+.section-title p{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.card{background:rgba(18,26,45,.78);border:1px solid var(--border);border-radius:18px;padding:24px}
+.card h3{margin-top:0}.card p,.card li{color:var(--muted)}
+.accordion{display:grid;gap:12px}
+details{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:0 20px}
+summary{cursor:pointer;padding:20px 0;font-weight:750;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary:after{content:"+";float:right;color:var(--accent2);font-size:1.4rem}
+details[open] summary:after{content:"−"}
+details p,details ul{color:var(--muted);padding:0 0 20px;margin:0}
+.pillrow{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}
+.pill{padding:8px 12px;border-radius:999px;background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.25);color:#d8d1ff}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.step{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px}
+.number{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--accent);font-weight:800;margin-bottom:15px}
+.example{background:linear-gradient(145deg,rgba(40,215,197,.08),rgba(124,92,255,.10));border:1px solid var(--border);border-radius:22px;padding:28px}
+.memory-line{display:flex;gap:8px;margin:22px 0;overflow:auto}
+.mem{min-width:125px;height:70px;border-radius:12px;display:grid;place-items:center;background:#26344e;border:1px solid var(--border);font-weight:700}
+.mem.used{background:linear-gradient(135deg,#7c5cff,#536dff)}
+.mem.free{color:#aab6d0}
+.quiz{display:grid;gap:12px}
+.quiz details{background:rgba(24,35,59,.75)}
+footer{padding:45px 0;border-top:1px solid var(--border);color:var(--muted)}
+.small{font-size:.9rem;color:var(--muted)}
+@media(max-width:850px){
+ nav div:last-child{display:none}.hero-grid{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}
+ .hero{padding:60px 0}.memory-card{margin-top:10px}
+}
+
+.interactive-example{position:relative;overflow:hidden}
+.demo-top{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:25px}
+.demo-label{display:block;text-transform:uppercase;letter-spacing:1.5px;font-size:.72rem;color:var(--muted);margin-bottom:5px}
+.demo-total,.process-request strong{font-size:1.35rem}
+.process-request{text-align:right}
+.memory-visual{display:grid;grid-template-columns:1.4fr .8fr 1.1fr 1fr;gap:8px;min-height:125px}
+.memory-visual .mem{min-width:0;height:125px;text-align:center;line-height:1.2;transition:all .35s ease}
+.memory-visual .mem.used{background:#26344e}
+.memory-visual .mem.used.large{background:linear-gradient(135deg,#293752,#202b42)}
+.memory-visual .mem.free{background:linear-gradient(135deg,rgba(40,215,197,.20),rgba(40,215,197,.08));border:2px dashed rgba(40,215,197,.45);color:#dffefa}
+.memory-visual small{font-size:.7rem;letter-spacing:1px;color:var(--muted)}
+.memory-visual.failed .free{animation:pulseFree .8s ease-in-out 2}
+.memory-visual.failed .free[data-size="80"]{transform:scale(.96)}
+.memory-visual.failed .free[data-size="150"]{transform:scale(.96)}
+@keyframes pulseFree{50%{opacity:.55;transform:translateY(-4px)}}
+.demo-controls{display:flex;gap:10px;flex-wrap:wrap;margin:25px 0 18px}
+.demo-btn{border:1px solid var(--border);background:#1b2740;color:var(--text);padding:11px 16px;border-radius:10px;cursor:pointer;font-weight:700}
+.demo-btn:hover,.demo-btn.active{background:var(--accent);border-color:transparent}
+.demo-result{display:flex;gap:15px;align-items:flex-start;padding:18px;border:1px solid var(--border);border-radius:15px;background:rgba(11,16,32,.35);min-height:90px}
+.result-icon{width:38px;height:38px;flex:0 0 38px;border-radius:10px;display:grid;place-items:center;background:var(--accent);font-weight:900}
+.demo-result p{margin:5px 0 0;color:var(--muted)}
+.demo-explanation{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px;flex-wrap:wrap}
+.mini-stat{padding:12px 18px;border-radius:12px;background:#18233b;border:1px solid var(--border);text-align:center}
+.mini-stat strong{display:block;font-size:1.2rem}
+.mini-stat span{font-size:.78rem;color:var(--muted)}
+.mini-stat.total{border-color:rgba(40,215,197,.3)}
+.operator{font-size:1.4rem;color:var(--accent2);font-weight:800}
+.demo-conclusion{margin:22px 0 0;padding:17px;border-left:3px solid var(--accent2);background:rgba(40,215,197,.05);color:#cbd5e8}
+@media(max-width:650px){
+ .demo-top{align-items:flex-start;flex-direction:column}
+ .process-request{text-align:left}
+ .memory-visual{grid-template-columns:1fr 1fr;min-height:0}
+ .memory-visual .mem{height:95px;font-size:.82rem}
+ .demo-explanation{justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+<header>
+<div class="container"><nav>
+<div class="logo">Sistemas <span>Operativos</span></div>
+<div>
+<a href="#intro">Introducción</a><a href="#concepto">Concepto</a><a href="#caracteristicas">Características</a>
+<a href="#funcionamiento">Funcionamiento</a><a href="#ejemplo">Ejemplo</a>
+</div>
+</nav></div>
+</header>
+
+<main>
+<section class="hero">
+<div class="container hero-grid">
+<div>
+<div class="badge">Actividad Evaluativa 1 · Asignación Contigua de Memoria</div>
+<h1>¿Cómo se organiza la <span>memoria RAM?</span></h1>
+<p class="lead">Una explicación interactiva sobre cómo el sistema operativo distribuye la memoria entre los procesos mediante la asignación contigua.</p>
+<a class="cta" href="#intro">Comenzar recorrido ↓</a>
+<p class="small">Ingeniería en Sistemas de Información · Sistemas Operativos</p>
+</div>
+<div class="memory-card">
+<h3>Una idea clave</h3>
+<p class="small">Cada proceso debe ocupar un único bloque continuo.</p>
+<div class="ram">
+<div class="block process">Proceso A</div>
+<div class="block process">Proceso B</div>
+<div class="block process">Proceso C</div>
+<div class="block free">Espacio libre</div>
+<div class="block free">Espacio libre</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="intro">
+<div class="container">
+<div class="section-title"><div class="kicker">01 · Contexto</div><h2>Introducción</h2>
+<p>La memoria RAM es uno de los recursos más importantes de una computadora, ya que permite almacenar temporalmente los programas y datos que están siendo utilizados. Cuando varios programas se ejecutan al mismo tiempo, el sistema operativo debe administrar este recurso limitado, decidiendo cómo distribuir el espacio disponible entre los distintos procesos.</p>
+</div>
+<div class="card"><p>Una de las formas de hacerlo es mediante la asignación continua de memoria, un método en el que cada proceso recibe un espacio ubicado de manera consecutiva. Este enfoque resulta sencillo de implementar y administrar, aunque con el tiempo puede generar fragmentación, es decir, la aparición de pequeños espacios libres dispersos que dificultan alojar nuevos procesos.</p>
+<p>En este trabajo se abordan sus características principales, ventajas, desventajas y los problemas más comunes asociados a su uso.</p></div>
+</div>
+</section>
+
+<section id="concepto">
+<div class="container">
+<div class="section-title"><div class="kicker">02 · Concepto</div><h2>Asignación Contigua de Memoria</h2>
+<p>La idea central es simple: un proceso necesita un único bloque continuo de direcciones de memoria.</p></div>
+<div class="grid">
+<div class="card"><h3>Definición</h3><p>Es una técnica utilizada por los sistemas operativos para administrar y distribuir el espacio disponible de la memoria principal (RAM) entre los diferentes procesos que necesitan ejecutarse.</p><p>Las posiciones de memoria utilizadas por un proceso deben encontrarse una al lado de la otra.</p></div>
+<div class="card"><h3>¿Qué debe controlar el sistema operativo?</h3><ul><li>Qué espacios de memoria están ocupados.</li><li>Cuáles están libres.</li><li>Qué cantidad de memoria requiere cada proceso.</li></ul><p>Su función es distribuir la memoria en base a las exigencias de los procesos ejecutados.</p></div>
+</div>
+</div>
+</section>
+
+<section id="caracteristicas">
+<div class="container">
+<div class="section-title"><div class="kicker">03 · Características</div><h2>Lo importante, explicado por partes</h2></div>
+<div class="accordion">
+<details open><summary>Dependencia del tamaño del proceso</summary><p>El tamaño de cada proceso determina qué espacios libres puede ocupar, ya que necesita un bloque continuo igual o mayor a su tamaño.</p></details>
+<details><summary>Ocupación en bloques continuos</summary><p>Cada proceso ocupa un bloque continuo de memoria, es decir, todas sus direcciones son consecutivas.</p><div class="pillrow"><span class="pill">Proceso A</span><span class="pill">Proceso B</span><span class="pill">Proceso C</span><span class="pill">Libre</span></div><p>No puede organizarse colocando un espacio libre en medio de un proceso.</p></details>
+<details><summary>Control de espacios</summary><p>El sistema operativo debe llevar un registro de qué espacios están ocupados y cuáles están libres, generalmente mediante tablas o listas.</p></details>
+<details><summary>Algoritmos de asignación</summary><p>La asignación contigua utiliza distintas estrategias para decidir qué bloque libre ocupará un proceso.</p>
+<ul>
+<li><strong>First Fit:</strong> selecciona el primer espacio encontrado que tenga capacidad suficiente.</li>
+<li><strong>Best Fit:</strong> busca el bloque más pequeño que pueda contener el proceso.</li>
+<li><strong>Worst Fit:</strong> busca el bloque más grande que pueda soportar el proceso.</li>
+<li><strong>Next Fit:</strong> continúa la búsqueda desde el lugar donde terminó la búsqueda anterior.</li>
+</ul></details>
+</div>
+</div>
+</section>
+
+<section>
+<div class="container">
+<div class="section-title"><div class="kicker">04 · Comparación</div><h2>Los cuatro algoritmos</h2></div>
+<div class="grid">
+<div class="card"><h3>First Fit</h3><p>Recorre los bloques libres desde el inicio y coloca el proceso en el primer espacio suficiente.</p><p><strong>Ejemplo del documento:</strong> para 220 MB, entre bloques 100, 200, 500 y 300 MB, se selecciona el de 500 MB.</p></div>
+<div class="card"><h3>Best Fit</h3><p>Busca el bloque más pequeño que cumpla con el espacio requerido.</p><p><strong>Ejemplo:</strong> para 202 MB, entre 500, 600 y 300 MB, selecciona 300 MB.</p></div>
+<div class="card"><h3>Worst Fit</h3><p>Busca el espacio de memoria más grande que pueda soportar el proceso.</p><p><strong>Ejemplo:</strong> para 250 MB, entre 100, 200, 500, 300 y 600 MB, selecciona 600 MB.</p></div>
+<div class="card"><h3>Next Fit</h3><p>Empieza la búsqueda desde el lugar donde se realizó la última búsqueda anterior y avanza hasta encontrar un bloque suficiente.</p></div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="container">
+<div class="section-title"><div class="kicker">05 · Problemas</div><h2>Desventajas: la fragmentación</h2></div>
+<div class="grid">
+<div class="card"><h3>Fragmentación interna</h3><p>Ocurre cuando se asigna a un proceso un bloque de memoria más grande que el espacio que realmente necesita, dejando una parte sin utilizar dentro de la zona ya asignada.</p><p>Aparece principalmente cuando se utilizan particiones de tamaño fijo.</p></div>
+<div class="card"><h3>Fragmentación externa</h3><p>Ocurre cuando existen espacios libres separados entre bloques ocupados. Puede haber suficiente memoria libre en total, pero no un único bloque continuo suficientemente grande para almacenar un nuevo proceso.</p></div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="container">
+<div class="section-title"><div class="kicker">06 · Ventajas</div><h2>¿Por qué utilizarla?</h2></div>
+<div class="grid">
+<div class="card"><h3>Simplicidad</h3><p>Es relativamente sencilla de implementar y administrar en comparación con otros esquemas de asignación.</p></div>
+<div class="card"><h3>Acceso y localidad</h3><p>La estructura permite acceder a los bloques de memoria con facilidad al encontrarse de manera contigua. Además, la cercanía de datos relacionados favorece los mecanismos de hardware que aprovechan la localidad espacial.</p></div>
+</div>
+</div>
+</section>
+
+<section id="funcionamiento">
+<div class="container">
+<div class="section-title"><div class="kicker">07 · Funcionamiento</div><h2>¿Cómo funciona?</h2><p>El proceso puede entenderse en cinco pasos.</p></div>
+<div class="steps">
+<div class="step"><div class="number">1</div><h3>Inicia</h3><p class="small">Un programa necesita una determinada cantidad de memoria.</p></div>
+<div class="step"><div class="number">2</div><h3>Busca</h3><p class="small">El sistema operativo revisa los bloques libres de la RAM.</p></div>
+<div class="step"><div class="number">3</div><h3>Comprueba</h3><p class="small">Debe existir un bloque continuo suficientemente grande.</p></div>
+<div class="step"><div class="number">4</div><h3>Asigna</h3><p class="small">El proceso se coloca en el bloque adecuado.</p></div>
+<div class="step"><div class="number">5</div><h3>Libera</h3><p class="small">Cuando termina, el espacio vuelve a quedar disponible.</p></div>
+</div>
+</div>
+</section>
+
+<section id="ejemplo">
+<div class="container">
+<div class="section-title"><div class="kicker">08 · Ejemplo práctico</div><h2>¿Hay memoria suficiente… pero no se puede usar?</h2>
+<p>Interactuá con el ejemplo para comprobar qué ocurre cuando un proceso necesita 200 MB.</p></div>
+
+<div class="example interactive-example">
+<div class="demo-top">
+  <div>
+    <span class="demo-label">Memoria disponible</span>
+    <strong class="demo-total">230 MB libres</strong>
+  </div>
+  <div class="process-request">
+    <span class="demo-label">Proceso que llega</span>
+    <strong>200 MB</strong>
+  </div>
+</div>
+
+<div class="memory-visual" id="memoryVisual">
+  <div class="mem used large">MEMORIA OCUPADA</div>
+  <div class="mem free" data-size="80">80 MB<br><small>LIBRES</small></div>
+  <div class="mem used">MEMORIA OCUPADA</div>
+  <div class="mem free" data-size="150">150 MB<br><small>LIBRES</small></div>
+</div>
+
+<div class="demo-controls">
+  <button class="demo-btn active" onclick="showMemoryState('normal', this)">Ver memoria</button>
+  <button class="demo-btn" onclick="showMemoryState('process', this)">Intentar colocar 200 MB</button>
+</div>
+
+<div class="demo-result" id="demoResult">
+  <div class="result-icon">?</div>
+  <div>
+    <strong>Antes de asignar el proceso</strong>
+    <p>Hay <strong>230 MB libres en total</strong>, pero están separados en dos bloques: 80 MB y 150 MB.</p>
+  </div>
+</div>
+
+<div class="demo-explanation" id="demoExplanation">
+  <div class="mini-stat"><strong>80 MB</strong><span>primer bloque libre</span></div>
+  <div class="operator">+</div>
+  <div class="mini-stat"><strong>150 MB</strong><span>segundo bloque libre</span></div>
+  <div class="operator">=</div>
+  <div class="mini-stat total"><strong>230 MB</strong><span>memoria libre total</span></div>
+</div>
+
+<p class="demo-conclusion"><strong>La clave:</strong> el proceso necesita un único bloque continuo de al menos 200 MB. Los bloques de 80 MB y 150 MB no pueden combinarse porque están separados por memoria ocupada.</p>
+</div>
+</div>
+</section>
+
+<section>
+<div class="container">
+<div class="section-title"><div class="kicker">09 · Repaso</div><h2>¿Cuánto conocemos?</h2></div>
+<div class="quiz">
+<details><summary>¿Qué caracteriza principalmente a la asignación continua de memoria?</summary><p><strong>Respuesta correcta:</strong> El proceso ocupa un único bloque consecutivo de memoria.</p></details>
+<details><summary>Hay 300 MB libres, pero están divididos en varios espacios separados. ¿Qué problema sucede?</summary><p><strong>Respuesta correcta:</strong> Fragmentación externa.</p></details>
+<details><summary>¿Cuál es una ventaja de la asignación continua de memoria?</summary><p><strong>Respuesta correcta:</strong> Es relativamente sencilla de administrar.</p></details>
+</div>
+</div>
+</section>
+
+<section>
+<div class="container">
+<div class="section-title"><div class="kicker">10 · Cierre</div><h2>Conclusión</h2></div>
+<div class="card"><p>La Asignación Contigua de Memoria es un método de asignación interesante y sencillo de entender. Permite comprender cómo los sistemas operativos asignan memoria a la RAM y presenta características, ventajas y situaciones problemáticas que resultan importantes de analizar.</p><p>Una de sus principales desventajas es el problema de la fragmentación. Sin embargo, esto no significa que el método sea malo específicamente, ya que existen otros tipos de organización de memoria y cada uno puede resultar más adecuado según una situación determinada.</p></div>
+</div>
+</section>
+</main>
+
+<footer>
+<div class="container">
+<strong>Asignación Contigua de Memoria</strong>
+<p>Actividad Evaluativa 1 · Sistemas Operativos · Ingeniería en Sistemas de Información</p>
+<p class="small">Estudiantes: German Rodriguez y Lucas Creamaschi · 04/09/2026</p>
+<p class="small">Bibliografía indicada en el documento: BYJU'S · Scaler · GeeksforGeeks · TakeUForward</p>
+<p class="small">Presentación asociada: https://canva.link/51nx8swrrkeykm6</p>
+</div>
+</footer>
+
+<script>
+function showMemoryState(state, button){
+  const visual = document.getElementById('memoryVisual');
+  const result = document.getElementById('demoResult');
+  const explanation = document.getElementById('demoExplanation');
+  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+  button.classList.add('active');
+
+  if(state === 'normal'){
+    visual.classList.remove('failed');
+    result.innerHTML = `
+      <div class="result-icon">?</div>
+      <div><strong>Antes de asignar el proceso</strong>
+      <p>Hay <strong>230 MB libres en total</strong>, pero están separados en dos bloques: 80 MB y 150 MB.</p></div>`;
+    explanation.innerHTML = `
+      <div class="mini-stat"><strong>80 MB</strong><span>primer bloque libre</span></div>
+      <div class="operator">+</div>
+      <div class="mini-stat"><strong>150 MB</strong><span>segundo bloque libre</span></div>
+      <div class="operator">=</div>
+      <div class="mini-stat total"><strong>230 MB</strong><span>memoria libre total</span></div>`;
+  } else {
+    visual.classList.add('failed');
+    result.innerHTML = `
+      <div class="result-icon">!</div>
+      <div><strong>No se puede asignar el proceso</strong>
+      <p>El programa necesita <strong>200 MB continuos</strong>, pero ningún bloque libre individual llega a ese tamaño.</p></div>`;
+    explanation.innerHTML = `
+      <div class="mini-stat"><strong>80 MB</strong><span>insuficiente</span></div>
+      <div class="operator">≠</div>
+      <div class="mini-stat"><strong>150 MB</strong><span>insuficiente</span></div>
+      <div class="operator">≠</div>
+      <div class="mini-stat total"><strong>200 MB</strong><span>necesarios en un solo bloque</span></div>`;
+  }
+}
+</script>
+</body>
+</html>
